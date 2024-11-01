@@ -1,9 +1,10 @@
 // src/screens/MapScreen.js
-import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import MapView, { Marker, Polyline } from 'react-native-maps';
+import React from "react";
+import { StyleSheet, View } from "react-native";
+import MapView, { Marker, Polyline } from "react-native-maps";
+import { MapScreenProps } from "../navigation";
 
-const MapScreen = ({ route }) => {
+const MapScreen = ({ route }: MapScreenProps) => {
   const { origem, destino } = route.params;
 
   return (
@@ -11,8 +12,8 @@ const MapScreen = ({ route }) => {
       <MapView
         style={styles.map}
         initialRegion={{
-          latitude: (origem.latitude + destino.latitude) / 2,
-          longitude: (origem.longitude + destino.longitude) / 2,
+          latitude:origem.latitude,
+          longitude:origem.longitude,
           latitudeDelta: 0.05,
           longitudeDelta: 0.05,
         }}
@@ -21,8 +22,8 @@ const MapScreen = ({ route }) => {
         <Marker coordinate={destino} title="Destino" />
         <Polyline
           coordinates={[origem, destino]}
-          strokeColor="#000" // Cor da linha
-          strokeWidth={3} // Largura da linha
+          strokeColor="#000"
+          strokeWidth={3}
         />
       </MapView>
     </View>

@@ -1,144 +1,229 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Button, Alert, StyleSheet, ScrollView, Image } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
-import axios from 'axios';
-import { Picker } from '@react-native-picker/picker';
+import { Picker } from "@react-native-picker/picker";
+import * as ImagePicker from "expo-image-picker";
+import React, { useEffect, useState } from "react";
+import {
+  Button,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import { apiInstance, isCreated, isOk } from "../requests";
+import { customAlert, customAlertError, customAlertSuccess } from "../utils";
 
-const api = axios.create({
-  baseURL: 'http://192.168.15.8:3000',
-  headers: {
-    'Content-Type': 'application/json',
+type Movement = {
+  id: string;
+  status: string;
+  originBranchId: string;
+  destinationBranchId: string;
+  productId: string;
+  quantity: string;
+  motorista: string;
+  produto: {
+    nome: string;
+    imagem: string;
+  };
+  quantidade: number;
+  origem: {
+    nome: string;
+  };
+  destino: {
+    nome: string;
+  };
+};
+
+type Branch = {
+  id: string;
+  name: string;
+};
+
+const validateMovement = (movement?: Movement | null): boolean => {
+  if (!movement) {
+    return false;
+  }
+
+  if (
+    !movement.originBranchId || !movement.destinationBranchId ||
+    !movement.productId || !movement.quantity ||
+    !movement.motorista
+  ) {
+    return false;
+  }
+
+  const quantityNumber = Number(movement.quantity);
+
+  if (isNaN(quantityNumber) || quantityNumber <= 0) {
+    return false;
+  }
+
+  return true;
+};
+
+const emptyMovement: Movement = {
+  id: "",
+  status: "",
+  originBranchId: "",
+  destinationBranchId: "",
+  productId: "",
+  quantity: "",
+  motorista: "",
+  produto: {
+    nome: "",
+    imagem: "",
   },
-});
+  quantidade: 0,
+  origem: {
+    nome: "",
+  },
+  destino: {
+    nome: "",
+  },
+};
 
 export default function MovementScreen() {
-  const [movement, setMovement] = useState({
-    originBranchId: '',
-    destinationBranchId: '',
-    productId: '',
-    quantity: '',
-    motorista: '',
-  });
-  const [movements, setMovements] = useState([]);
-  const [selectedImage, setSelectedImage] = useState(null);
-  const [branches, setBranches] = useState([]);
+  const [movement, setMovement] = useState<Movement>(emptyMovement);
+  const [movements, setMovements] = useState<Movement[]>([]);
+  const [selectedImageUri, setSelectedImageUri] = useState<string | null>(
+    null,
+  );
+  const [branches, setBranches] = useState<Branch[]>([]);
 
-  // Função para buscar filiais e listar movimentações
-  useEffect(() => {
-    const fetchBranchesAndMovements = async () => {
-      try {
-        const branchResponse = await api.get('/branches/options');
-        setBranches(branchResponse.data);
-
-        const movementResponse = await api.get('/movements');
-        setMovements(movementResponse.data);
-      } catch (error) {
-        console.error('Erro ao buscar dados:', error);
-      }
-    };
-    fetchBranchesAndMovements();
-  }, []);
-
-  // Função para atualizar as movimentações
-  const fetchMovements = async () => {
+  const fetchBranchesAndMovements = async () => {
+    // Função para buscar filiais e listar movimentações
     try {
-      const response = await api.get('/movements');
-      setMovements(response.data);
+      const branchResponse = await apiInstance.get<Branch[]>(
+        "/branches/options",
+      );
+      setBranches(branchResponse.data);
     } catch (error) {
-      console.error('Erro ao buscar movimentações:', error);
+      console.error("Erro ao buscar dados:", error);
     }
   };
 
+  const fetchMovements = async () => {
+    console.log(`carregando moves`);
+
+    // Função para atualizar as movimentações
+    try {
+      const response = await apiInstance.get<Movement[]>("/movements");
+      setMovements(response.data);
+    } catch (error) {
+      customAlertError("Erro ao buscar movimentações.");
+      console.error("Erro ao buscar movimentações:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchBranchesAndMovements();
+    fetchMovements();
+  }, []);
+
   // Função para lidar com a finalização da entrega
-  const handleEndDelivery = async (id) => {
-    if (!selectedImage) {
-      Alert.alert('Erro', 'Por favor, selecione uma imagem.');
-      return;
+  const handleEndDelivery = async (id: string) => {
+    if (!selectedImageUri) {
+      return customAlert("Erro", "Por favor, selecione uma imagem.");
     }
 
     const formData = new FormData();
-    formData.append('file', {
-      uri: selectedImage,
-      name: 'image.jpg',
-      type: 'image/jpeg',
-    });
+    formData.append("file", {
+      uri: selectedImageUri,
+      name: "image.jpg",
+      type: "image/jpeg",
+    } as any);
 
     try {
-      const response = await api.put(`/movements/${id}/end`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+      const response = await apiInstance.put(`/movements/${id}/end`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
 
       if (response.status === 200) {
-        Alert.alert('Sucesso', 'Entrega finalizada com sucesso!');
+        customAlert("Sucesso", "Entrega finalizada com sucesso!");
         fetchMovements(); // Atualiza a lista após a finalização
       } else {
-        Alert.alert('Erro', 'Falha ao finalizar a entrega.');
+        customAlert("Erro", "Falha ao finalizar a entrega.");
       }
     } catch (error) {
-      console.error('Erro ao finalizar entrega:', error);
-      Alert.alert('Erro', 'Não foi possível finalizar a entrega.');
+      console.error("Erro ao finalizar entrega:", error);
+      customAlert("Erro", "Não foi possível finalizar a entrega.");
     }
   };
 
   // Função para lidar com a criação de movimentação
   const handleSubmit = async () => {
-    const { originBranchId, destinationBranchId, productId, quantity, motorista } = movement;
-
-    if (!originBranchId || !destinationBranchId || !productId || !quantity || !motorista) {
-      Alert.alert('Erro', 'Por favor, preencha todos os campos.');
-      return;
+    if (!validateMovement(movement)) {
+      return customAlertError("Preencha todos os campos corretamente.");
     }
 
-    if (isNaN(quantity) || Number(quantity) <= 0) {
-      Alert.alert('Erro', 'A quantidade deve ser um número válido maior que zero.');
+    if (!movement) {
       return;
     }
 
     try {
-      const createResponse = await api.post('/movements', movement);
-      if (createResponse.status === 201) {
-        Alert.alert('Sucesso', 'Movimentação criada com sucesso!');
+      const createResponse = await apiInstance.post("/movements", movement);
+
+      // 201 Created
+      if (isCreated(createResponse.status)) {
+        customAlertSuccess("Movimentação criada com sucesso!");
         const movementId = createResponse.data.id;
 
-        if (selectedImage) {
+        if (selectedImageUri) {
           const formData = new FormData();
-          formData.append('file', {
-            uri: selectedImage,
-            name: 'image.jpg',
-            type: 'image/jpeg',
-          });
-          formData.append('motorista', motorista);
 
-          const startResponse = await api.put(`/movements/${movementId}/start`, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-          });
+          formData.append("file", {
+            uri: selectedImageUri,
+            name: "image.jpg",
+            type: "image/jpeg",
+          } as any);
 
-          if (startResponse.status === 200) {
-            Alert.alert('Sucesso', 'Movimentação iniciada com sucesso!');
+          formData.append("motorista", movement.motorista);
+
+          const startResponse = await apiInstance.put(
+            `/movements/${movementId}/start`,
+            formData,
+            {
+              headers: { "Content-Type": "multipart/form-data" },
+            },
+          );
+
+          if (isOk(startResponse.status)) {
+            setMovement(emptyMovement);
+            customAlertSuccess("Movimentação iniciada com sucesso!");
             fetchMovements(); // Atualiza a lista de movimentações após criar uma nova
           } else {
-            Alert.alert('Erro', 'Falha ao iniciar a movimentação. Tente novamente.');
+            customAlertError(
+              "Falha ao iniciar a movimentação. Tente novamente.",
+            );
           }
         }
       } else {
-        Alert.alert('Erro', 'Não foi possível criar a movimentação. Tente novamente.');
+        customAlertError(
+          "Não foi possível criar a movimentação. Tente novamente.",
+        );
       }
     } catch (error) {
-      console.error('Erro ao criar movimentação:', error);
-      Alert.alert('Erro', 'Não foi possível criar a movimentação. Verifique os dados e tente novamente.');
+      console.error(error);
+      customAlertError(
+        "Não foi possível criar a movimentação. Verifique os dados e tente novamente.",
+      );
     }
   };
 
   const handleImagePick = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 1,
-    });
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 1,
+      });
 
-    if (!result.cancelled) {
-      setSelectedImage(result.uri);
+      if (!result.canceled) {
+        setSelectedImageUri(result.assets[0].uri);
+      }
+    } catch (error) {
+      customAlertError("Unable to pick image: " + error);
     }
   };
 
@@ -147,79 +232,131 @@ export default function MovementScreen() {
       {/* Listagem de Movimentações */}
       <View style={styles.listContainer}>
         <Text style={styles.title}>Lista de Movimentações</Text>
-        {movements.map((movement) => (
-          <View key={movement.id} style={[styles.movementItem, movement.status === "Em Trânsito" ? styles.inTransit : styles.created]}>
-            <Text>Produto Nome: {movement.produto?.nome ?? 'Não disponível'}</Text>
-            <Text>ID da Movimentação: {movement.id}</Text>
-            {movement.status === "Em Trânsito" && (
+        {movements.map((movementItem) => (
+          <View
+            key={movementItem.id}
+            style={[
+              styles.movementItem,
+              movementItem.status === "Em Trânsito"
+                ? styles.inTransit
+                : styles.created,
+            ]}
+          >
+            <Text>
+              Produto Nome: {movementItem.produto?.nome ?? "Não disponível"}
+            </Text>
+            <Text>ID da Movimentação: {movementItem.id}</Text>
+            {movementItem.status === "Em Trânsito" && (
               <>
-                <Text>Quantidade: {movement.quantidade}</Text>
-                <Text>Origem: {movement.origem?.nome}</Text>
-                <Text>Destino: {movement.destino?.nome}</Text>
-                <Text>Status: {movement.status}</Text>
+                <Text>Quantidade: {movementItem.quantidade}</Text>
+                <Text>Origem: {movementItem.origem?.nome}</Text>
+                <Text>Destino: {movementItem.destino?.nome}</Text>
+                <Text>Status: {movementItem.status}</Text>
               </>
             )}
-            {movement.produto?.imagem && (
-              <Image source={{ uri: movement.produto.imagem }} style={styles.image} />
+            {movementItem.produto?.imagem && (
+              <Image
+                source={{ uri: movementItem.produto.imagem }}
+                style={styles.image}
+              />
             )}
-            {movement.status === "Em Trânsito" && (
-              <Button title="Finalizar Entrega" onPress={() => handleEndDelivery(movement.id)} />
+            {movementItem.status === "Em Trânsito" && (
+              <Button
+                title="Finalizar Entrega"
+                onPress={() => handleEndDelivery(movementItem.id)}
+              />
             )}
-            {movement.status === "Created" && (
-              <Button title="Iniciar Entrega" onPress={() => handleEndDelivery(movement.id)} />
+            {movementItem.status === "Created" && (
+              <Button
+                title="Iniciar Entrega"
+                onPress={() => handleEndDelivery(movementItem.id)}
+              />
             )}
           </View>
         ))}
       </View>
-
-      {/* Formulário para criar movimentação */}
       <View style={styles.formContainer}>
         <Text style={styles.title}>Criar Movimentação</Text>
-        <Picker
-          selectedValue={movement.originBranchId}
-          onValueChange={(itemValue) => setMovement({ ...movement, originBranchId: itemValue })}
-          style={styles.picker}
+        <View
+          style={{
+            height: 50,
+            borderWidth: 1,
+            borderColor: "#000",
+            marginBottom: 10
+          }}
         >
-          <Picker.Item label="Selecione a Filial de Origem" value="" />
-          {branches.map((branch) => (
-            <Picker.Item key={branch.id} label={branch.name} value={branch.id} />
-          ))}
-        </Picker>
-
-        <Picker
-          selectedValue={movement.destinationBranchId}
-          onValueChange={(itemValue) => setMovement({ ...movement, destinationBranchId: itemValue })}
-          style={styles.picker}
+          <Picker
+            itemStyle={{ height: 50 }}
+            selectedValue={movement.originBranchId}
+            onValueChange={(itemValue) =>
+              setMovement({ ...movement, originBranchId: itemValue })}
+          >
+            <Picker.Item label="Selecione a Filial de Origem" value="" />
+            {branches.map((branch) => (
+              <Picker.Item
+                key={branch.id}
+                label={branch.name}
+                value={branch.id}
+              />
+            ))}
+          </Picker>
+          </View>
+          <View
+          style={{
+            height: 50,
+            borderWidth: 1,
+            borderColor: "#000",
+            marginBottom: 10
+          }}
         >
-          <Picker.Item label="Selecione a Filial de Destino" value="" />
-          {branches.map((branch) => (
-            <Picker.Item key={branch.id} label={branch.name} value={branch.id} />
-          ))}
-        </Picker>
-
-        <TextInput
-          style={styles.input}
-          placeholder="ID do Produto"
-          value={movement.productId}
-          onChangeText={(text) => setMovement({ ...movement, productId: text })}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Quantidade"
-          value={movement.quantity}
-          keyboardType="numeric"
-          onChangeText={(text) => setMovement({ ...movement, quantity: text })}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Nome do Motorista"
-          value={movement.motorista}
-          onChangeText={(text) => setMovement({ ...movement, motorista: text })}
-        />
-        <Button title="Selecionar Imagem" onPress={handleImagePick} />
-        {selectedImage && <Image source={{ uri: selectedImage }} style={styles.image} />}
-        <Button title="Criar Movimentação" onPress={handleSubmit} />
+          <Picker
+          itemStyle={{ height: 50 }}
+            selectedValue={movement.destinationBranchId}
+            onValueChange={(itemValue) =>
+              setMovement({ ...movement, destinationBranchId: itemValue })}
+            style={styles.picker}
+          >
+            <Picker.Item label="Selecione a Filial de Destino" value="" />
+            {branches.map((branch) => (
+              <Picker.Item
+                key={branch.id}
+                label={branch.name}
+                value={branch.id}
+              />
+            ))}
+          </Picker>
+        </View>
+        <View>
+          <TextInput
+            style={styles.input}
+            placeholder="ID do Produto"
+            value={movement.productId}
+            onChangeText={(text) =>
+              setMovement({ ...movement, productId: text })}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Quantidade"
+            value={movement.quantity}
+            keyboardType="numeric"
+            onChangeText={(text) =>
+              setMovement({ ...movement, quantity: text })}
+          />
+          <TextInput
+            style={styles.input}
+            placeholder="Nome do Motorista"
+            value={movement.motorista}
+            onChangeText={(text) =>
+              setMovement({ ...movement, motorista: text })}
+          />
+          <Button title="Selecionar Imagem" onPress={handleImagePick} />
+        </View>
+        {selectedImageUri && (
+          <Image source={{ uri: selectedImageUri }} style={styles.image} />
+        )}
       </View>
+      {!movement && <Text>Carregando...</Text>}
+      <Button title="Criar Movimentação" onPress={handleSubmit} />
     </ScrollView>
   );
 }
@@ -228,11 +365,22 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: 20 },
   listContainer: { marginBottom: 20 },
   formContainer: { marginBottom: 20 },
-  title: { fontSize: 20, fontWeight: 'bold', marginBottom: 10 },
-  movementItem: { borderWidth: 1, borderColor: '#ccc', padding: 10, marginBottom: 10 },
-  inTransit: { backgroundColor: '#d0e9ff' },
-  created: { backgroundColor: '#fff3cd' },
-  input: { height: 40, borderColor: 'gray', borderWidth: 1, marginBottom: 10, paddingLeft: 5 },
-  picker: { height: 50, width: '100%', marginBottom: 10 },
+  title: { fontSize: 20, fontWeight: "bold", marginBottom: 10 },
+  movementItem: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    padding: 10,
+    marginBottom: 10,
+  },
+  inTransit: { backgroundColor: "#d0e9ff" },
+  created: { backgroundColor: "#fff3cd" },
+  input: {
+    height: 40,
+    borderColor: "gray",
+    borderWidth: 1,
+    marginBottom: 10,
+    paddingLeft: 5,
+  },
+  picker: { height: 50, marginBottom: 10 },
   image: { width: 100, height: 100, marginVertical: 10 },
 });

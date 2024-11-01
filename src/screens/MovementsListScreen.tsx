@@ -1,13 +1,6 @@
 import * as ImagePicker from "expo-image-picker";
 import React, { useEffect, useState } from "react";
-import {
-  Button,
-  FlatList,
-  Image,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Button, FlatList, Image, StyleSheet, Text, View } from "react-native";
 import { API_URL } from "../constants";
 import { customAlertError, customAlertSuccess } from "../utils";
 import { MovementsListScreenProps } from "../navigation";
@@ -58,7 +51,10 @@ const MovementsListScreen = ({ navigation }: MovementsListScreenProps) => {
     fetchMovements();
   }, []);
 
-  const handleImagePicker = async (movementId: string, action: "start" | "end") => {
+  const handleImagePicker = async (
+    movementId: string,
+    action: "start" | "end",
+  ) => {
     try {
       console.log("Iniciando captura de imagem...");
 
@@ -76,22 +72,22 @@ const MovementsListScreen = ({ navigation }: MovementsListScreenProps) => {
       }
 
       const formData = new FormData();
-      // image e eh pra file
-      formData.append('file', {
+
+      formData.append("file", {
         uri: result.assets[0].uri,
-        name: 'file.jpg',
-        type: 'image/jpeg',
+        name: "file.jpg",
+        type: "image/jpeg",
       } as any);
 
       const driverName = "TODO Change driver name";
 
       formData.append("motorista", driverName);
-
-      const response = await apiInstance.put(`/movements/${movementId}/${action}`, formData, {
+      const reqUrl = `/movements/${movementId}/${action}`;
+      const response = await apiInstance.put(reqUrl, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
-      );
+      });
 
       if (isOk(response.status)) {
         customAlertSuccess("Imagem enviada com sucesso!");
@@ -113,7 +109,9 @@ const MovementsListScreen = ({ navigation }: MovementsListScreenProps) => {
         />
         <Text style={styles.movementText}>ID: {item.id}</Text>
         <Text style={styles.movementText}>Produto: {item.produto.nome}</Text>
-        <Text style={styles.observationText}>Quantidade: {item.quantidade}</Text>
+        <Text style={styles.observationText}>
+          Quantidade: {item.quantidade}
+        </Text>
         <Text style={styles.observationText}>Origem: {item.origem.nome}</Text>
         <Text style={styles.observationText}>Destino: {item.destino.nome}</Text>
         <Text style={styles.observationText}>Status: {item.status}</Text>
@@ -130,19 +128,19 @@ const MovementsListScreen = ({ navigation }: MovementsListScreenProps) => {
               title="Finalizar Entrega"
               onPress={() => handleImagePicker(item.id, "end")}
             />
-            <Button title="Ver Mapa"
-
+            <Button
+              title="Ver Mapa"
               onPress={() =>
                 navigation.navigate("Map", {
                   origem: item.origem,
-                  destino: item.destino
+                  destino: item.destino,
                 })}
             />
           </View>
         )}
         {item.status === "coleta finalizada" && (
-          <Button title="Ver Mapa"
-
+          <Button
+            title="Ver Mapa"
             onPress={() =>
               navigation.navigate("Map", {
                 origem: item.origem,
@@ -152,7 +150,7 @@ const MovementsListScreen = ({ navigation }: MovementsListScreenProps) => {
         )}
       </View>
     );
-  }
+  };
 
   const getCardStyle = (status: string) => {
     switch (status) {

@@ -169,11 +169,11 @@ export default function MovementScreen() {
 
         if (selectedImageUri) {
           const formData = new FormData();
-          // image e eh pra file
-          formData.append('file', {
+
+          formData.append("file", {
             uri: selectedImageUri,
-            name: 'file.jpg',
-            type: 'image/jpeg',
+            name: "file.jpg",
+            type: "image/jpeg",
           } as any);
 
           const driverName = "TODO Change driver name";
@@ -225,7 +225,7 @@ export default function MovementScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
-      <ScrollView style={[styles.container, { height: '100%' }]}>
+      <ScrollView style={[styles.container, { height: "100%" }]}>
         {/* Listagem de Movimentações */}
         <View style={styles.listContainer}>
           <Text style={styles.title}>Lista de Movimentações</Text>
@@ -279,7 +279,7 @@ export default function MovementScreen() {
               height: 50,
               borderWidth: 1,
               borderColor: "#000",
-              marginBottom: 10
+              marginBottom: 10,
             }}
           >
             <Picker
@@ -303,7 +303,7 @@ export default function MovementScreen() {
               height: 50,
               borderWidth: 1,
               borderColor: "#000",
-              marginBottom: 10
+              marginBottom: 10,
             }}
           >
             <Picker
@@ -362,7 +362,7 @@ export default function MovementScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, },
+  container: { flex: 1, padding: 20 },
   listContainer: { marginBottom: 20 },
   formContainer: { marginBottom: 20 },
   title: { fontSize: 20, fontWeight: "bold", marginBottom: 10 },

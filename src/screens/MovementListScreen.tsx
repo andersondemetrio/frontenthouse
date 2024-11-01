@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { apiInstance, isCreated, isOk } from "../requests";
 import { customAlert, customAlertError, customAlertSuccess } from "../utils";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 type Movement = {
   id: string;
@@ -103,8 +104,6 @@ export default function MovementScreen() {
   };
 
   const fetchMovements = async () => {
-    console.log(`carregando moves`);
-
     // Função para atualizar as movimentações
     try {
       const response = await apiInstance.get<Movement[]>("/movements");
@@ -173,21 +172,23 @@ export default function MovementScreen() {
 
           formData.append("file", {
             uri: selectedImageUri,
-            name: "image.jpg",
+            name: "file.jpg",
             type: "image/jpeg",
           } as any);
 
-          formData.append("motorista", movement.motorista);
+          const driverName = "TODO Change driver name";
 
-          const startResponse = await apiInstance.put(
-            `/movements/${movementId}/start`,
-            formData,
-            {
-              headers: { "Content-Type": "multipart/form-data" },
+          formData.append("motorista", driverName);
+          const reqUrl = `/movements/${movementId}/start`;
+
+          const startResponse = await apiInstance.put(reqUrl, formData, {
+            headers: {
+              "Content-Type": "multipart/form-data",
             },
-          );
+          });
 
           if (isOk(startResponse.status)) {
+            setSelectedImageUri(null);
             setMovement(emptyMovement);
             customAlertSuccess("Movimentação iniciada com sucesso!");
             fetchMovements(); // Atualiza a lista de movimentações após criar uma nova
@@ -212,12 +213,7 @@ export default function MovementScreen() {
 
   const handleImagePick = async () => {
     try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 1,
-      });
+      const result = await ImagePicker.launchImageLibraryAsync();
 
       if (!result.canceled) {
         setSelectedImageUri(result.assets[0].uri);
@@ -228,136 +224,140 @@ export default function MovementScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      {/* Listagem de Movimentações */}
-      <View style={styles.listContainer}>
-        <Text style={styles.title}>Lista de Movimentações</Text>
-        {movements.map((movementItem) => (
-          <View
-            key={movementItem.id}
-            style={[
-              styles.movementItem,
-              movementItem.status === "Em Trânsito"
-                ? styles.inTransit
-                : styles.created,
-            ]}
-          >
-            <Text>
-              Produto Nome: {movementItem.produto?.nome ?? "Não disponível"}
-            </Text>
-            <Text>ID da Movimentação: {movementItem.id}</Text>
-            {movementItem.status === "Em Trânsito" && (
-              <>
-                <Text>Quantidade: {movementItem.quantidade}</Text>
-                <Text>Origem: {movementItem.origem?.nome}</Text>
-                <Text>Destino: {movementItem.destino?.nome}</Text>
-                <Text>Status: {movementItem.status}</Text>
-              </>
-            )}
-            {movementItem.produto?.imagem && (
-              <Image
-                source={{ uri: movementItem.produto.imagem }}
-                style={styles.image}
-              />
-            )}
-            {movementItem.status === "Em Trânsito" && (
-              <Button
-                title="Finalizar Entrega"
-                onPress={() => handleEndDelivery(movementItem.id)}
-              />
-            )}
-            {movementItem.status === "Created" && (
-              <Button
-                title="Iniciar Entrega"
-                onPress={() => handleEndDelivery(movementItem.id)}
-              />
-            )}
-          </View>
-        ))}
-      </View>
-      <View style={styles.formContainer}>
-        <Text style={styles.title}>Criar Movimentação</Text>
-        <View
-          style={{
-            height: 50,
-            borderWidth: 1,
-            borderColor: "#000",
-            marginBottom: 10
-          }}
-        >
-          <Picker
-            itemStyle={{ height: 50 }}
-            selectedValue={movement.originBranchId}
-            onValueChange={(itemValue) =>
-              setMovement({ ...movement, originBranchId: itemValue })}
-          >
-            <Picker.Item label="Selecione a Filial de Origem" value="" />
-            {branches.map((branch) => (
-              <Picker.Item
-                key={branch.id}
-                label={branch.name}
-                value={branch.id}
-              />
-            ))}
-          </Picker>
-          </View>
-          <View
-          style={{
-            height: 50,
-            borderWidth: 1,
-            borderColor: "#000",
-            marginBottom: 10
-          }}
-        >
-          <Picker
-          itemStyle={{ height: 50 }}
-            selectedValue={movement.destinationBranchId}
-            onValueChange={(itemValue) =>
-              setMovement({ ...movement, destinationBranchId: itemValue })}
-            style={styles.picker}
-          >
-            <Picker.Item label="Selecione a Filial de Destino" value="" />
-            {branches.map((branch) => (
-              <Picker.Item
-                key={branch.id}
-                label={branch.name}
-                value={branch.id}
-              />
-            ))}
-          </Picker>
+    <SafeAreaView style={{ flex: 1 }}>
+      <ScrollView style={[styles.container, { height: "100%" }]}>
+        {/* Listagem de Movimentações */}
+        <View style={styles.listContainer}>
+          <Text style={styles.title}>Lista de Movimentações</Text>
+          {movements.map((movementItem) => (
+            <View
+              key={movementItem.id}
+              style={[
+                styles.movementItem,
+                movementItem.status === "Em Trânsito"
+                  ? styles.inTransit
+                  : styles.created,
+              ]}
+            >
+              <Text>
+                Produto Nome: {movementItem.produto?.nome ?? "Não disponível"}
+              </Text>
+              <Text>ID da Movimentação: {movementItem.id}</Text>
+              {movementItem.status === "Em Trânsito" && (
+                <>
+                  <Text>Quantidade: {movementItem.quantidade}</Text>
+                  <Text>Origem: {movementItem.origem?.nome}</Text>
+                  <Text>Destino: {movementItem.destino?.nome}</Text>
+                  <Text>Status: {movementItem.status}</Text>
+                </>
+              )}
+              {movementItem.produto?.imagem && (
+                <Image
+                  source={{ uri: movementItem.produto.imagem }}
+                  style={styles.image}
+                />
+              )}
+              {movementItem.status === "Em Trânsito" && (
+                <Button
+                  title="Finalizar Entrega"
+                  onPress={() => handleEndDelivery(movementItem.id)}
+                />
+              )}
+              {movementItem.status === "Created" && (
+                <Button
+                  title="Iniciar Entrega"
+                  onPress={() => handleEndDelivery(movementItem.id)}
+                />
+              )}
+            </View>
+          ))}
         </View>
-        <View>
-          <TextInput
-            style={styles.input}
-            placeholder="ID do Produto"
-            value={movement.productId}
-            onChangeText={(text) =>
-              setMovement({ ...movement, productId: text })}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Quantidade"
-            value={movement.quantity}
-            keyboardType="numeric"
-            onChangeText={(text) =>
-              setMovement({ ...movement, quantity: text })}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Nome do Motorista"
-            value={movement.motorista}
-            onChangeText={(text) =>
-              setMovement({ ...movement, motorista: text })}
-          />
-          <Button title="Selecionar Imagem" onPress={handleImagePick} />
+        <View style={styles.formContainer}>
+          <Text style={styles.title}>Criar Movimentação</Text>
+          <View
+            style={{
+              height: 50,
+              borderWidth: 1,
+              borderColor: "#000",
+              marginBottom: 10,
+            }}
+          >
+            <Picker
+              itemStyle={{ height: 50 }}
+              selectedValue={movement.originBranchId}
+              onValueChange={(itemValue) =>
+                setMovement({ ...movement, originBranchId: itemValue })}
+            >
+              <Picker.Item label="Selecione a Filial de Origem" value="" />
+              {branches.map((branch) => (
+                <Picker.Item
+                  key={branch.id}
+                  label={branch.name}
+                  value={branch.id}
+                />
+              ))}
+            </Picker>
+          </View>
+          <View
+            style={{
+              height: 50,
+              borderWidth: 1,
+              borderColor: "#000",
+              marginBottom: 10,
+            }}
+          >
+            <Picker
+              itemStyle={{ height: 50 }}
+              selectedValue={movement.destinationBranchId}
+              onValueChange={(itemValue) =>
+                setMovement({ ...movement, destinationBranchId: itemValue })}
+              style={styles.picker}
+            >
+              <Picker.Item label="Selecione a Filial de Destino" value="" />
+              {branches.map((branch) => (
+                <Picker.Item
+                  key={branch.id}
+                  label={branch.name}
+                  value={branch.id}
+                />
+              ))}
+            </Picker>
+          </View>
+          <View>
+            <TextInput
+              style={styles.input}
+              placeholder="ID do Produto"
+              value={movement.productId}
+              onChangeText={(text) =>
+                setMovement({ ...movement, productId: text })}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Quantidade"
+              value={movement.quantity}
+              keyboardType="numeric"
+              onChangeText={(text) =>
+                setMovement({ ...movement, quantity: text })}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Nome do Motorista"
+              value={movement.motorista}
+              onChangeText={(text) =>
+                setMovement({ ...movement, motorista: text })}
+            />
+            <Button title="Selecionar Imagem" onPress={handleImagePick} />
+          </View>
+          {selectedImageUri && (
+            <Image source={{ uri: selectedImageUri }} style={styles.image} />
+          )}
         </View>
-        {selectedImageUri && (
-          <Image source={{ uri: selectedImageUri }} style={styles.image} />
-        )}
-      </View>
-      {!movement && <Text>Carregando...</Text>}
-      <Button title="Criar Movimentação" onPress={handleSubmit} />
-    </ScrollView>
+        {!movement && <Text>Carregando...</Text>}
+        <View style={{ marginBottom: 100 }}>
+          <Button title="Criar Movimentação" onPress={handleSubmit} />
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 

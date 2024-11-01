@@ -94,7 +94,7 @@ export default function ProductListScreen() {
         data={filteredProducts}
         renderItem={renderProduct}
         keyExtractor={(item) => {
-          return item.product_name
+          return item.product_name;
         }}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={

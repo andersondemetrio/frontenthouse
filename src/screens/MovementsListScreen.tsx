@@ -1,16 +1,10 @@
 import * as ImagePicker from "expo-image-picker";
 import React, { useEffect, useState } from "react";
-import {
-  Button,
-  FlatList,
-  Image,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Button, FlatList, Image, StyleSheet, Text, View } from "react-native";
 import { API_URL } from "../constants";
 import { customAlertError, customAlertSuccess } from "../utils";
 import { MovementsListScreenProps } from "../navigation";
+import { apiInstance, isOk } from "../requests";
 
 type Movement = {
   item: {
@@ -34,10 +28,7 @@ type Movement = {
   };
 };
 
-const MovementsListScreen = ({ navigation}: MovementsListScreenProps) => {
-  console.log('I am here', '',);
-
-
+const MovementsListScreen = ({ navigation }: MovementsListScreenProps) => {
   const [movements, setMovements] = useState([]);
 
   const fetchMovements = async () => {
@@ -60,95 +51,48 @@ const MovementsListScreen = ({ navigation}: MovementsListScreenProps) => {
     fetchMovements();
   }, []);
 
-  const handleImagePicker = async (movementId: string, action: string) => {
+  const handleImagePicker = async (
+    movementId: string,
+    action: "start" | "end",
+  ) => {
     try {
       console.log("Iniciando captura de imagem...");
 
-      // Verificar permissões da câmera
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
 
       if (status !== "granted") {
-        customAlertError(
+        return customAlertError(
           "Permissão de câmera necessária para capturar a imagem.",
         );
+      }
+
+      const result = await ImagePicker.launchCameraAsync();
+      if (result.canceled || !result.assets?.length) {
         return;
       }
 
-      console.log("Permissão de câmera concedida");
+      const formData = new FormData();
 
-      // Abrir câmera
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        quality: 0.5,
-        allowsEditing: true,
+      formData.append("file", {
+        uri: result.assets[0].uri,
+        name: "file.jpg",
+        type: "image/jpeg",
+      } as any);
+
+      const driverName = "TODO Change driver name";
+
+      formData.append("motorista", driverName);
+      const reqUrl = `/movements/${movementId}/${action}`;
+      const response = await apiInstance.put(reqUrl, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
       });
 
-      if (result.canceled) {
-        console.log("Captura de imagem cancelada");
-        return;
+      if (isOk(response.status)) {
+        customAlertSuccess("Imagem enviada com sucesso!");
+        await fetchMovements();
       }
-
-      console.log("Imagem capturada com sucesso");
-
-      // Preparar o arquivo de imagem
-      const localUri = result.assets[0].uri;
-      const filename = localUri.split("/").pop();
-      const match = /\.(\w+)$/.exec(filename || "");
-      const type = match ? `image/${match[1]}` : "image/jpeg";
-
-      console.log("Tipo de imagem:", type);
-
-      // Criar FormData
-      const formData = new FormData();
-      formData.append("image", {
-        uri: localUri,
-        name: filename,
-        type,
-      } as any);
-      formData.append("driverName", "Seu Nome");
-
-      console.log("FormData criada com sucesso");
-
-      // Enviar a imagem
-      const response = await fetch(
-        `${API_URL}/movements/${movementId}/${action}`,
-        {
-          method: "PUT",
-          body: formData,
-          headers: {
-            "Accept": "application/json",
-            "Content-Type": "multipart/form-data",
-          },
-        },
-      );
-
-      console.log("Resposta recebida do servidor:", response.status);
-
-      if (!response.ok) {
-        let errorMessage;
-        try {
-          const text = await response.text();
-          if (text.startsWith("<html")) {
-            console.error("Erro HTML:", text);
-            errorMessage = "Erro HTML recebido";
-          } else {
-            try {
-              const jsonData = JSON.parse(text);
-              errorMessage = jsonData.message || "Erro ao enviar imagem";
-            } catch (parseError) {
-              console.error("Erro ao parsear JSON:", parseError);
-              errorMessage = "Erro ao parsear resposta do servidor";
-            }
-          }
-        } catch (error) {
-          console.error("Erro ao ler resposta:", error);
-          errorMessage = "Erro ao ler resposta do servidor";
-        }
-        throw new Error(errorMessage);
-      }
-
-      customAlertSuccess("Imagem enviada com sucesso!");
-      await fetchMovements();
     } catch (error) {
       console.error("Erro ao processar imagem:", error);
       customAlertError("Não foi possível enviar a imagem. Tente novamente.");
@@ -156,10 +100,6 @@ const MovementsListScreen = ({ navigation}: MovementsListScreenProps) => {
   };
 
   const renderItem = ({ item }: Movement) => {
-
-
-    console.log(`item`, item);
-
     return (
       <View style={[styles.movementCard, getCardStyle(item.status)]}>
         <Image
@@ -169,7 +109,9 @@ const MovementsListScreen = ({ navigation}: MovementsListScreenProps) => {
         />
         <Text style={styles.movementText}>ID: {item.id}</Text>
         <Text style={styles.movementText}>Produto: {item.produto.nome}</Text>
-        <Text style={styles.observationText}>Quantidade: {item.quantidade}</Text>
+        <Text style={styles.observationText}>
+          Quantidade: {item.quantidade}
+        </Text>
         <Text style={styles.observationText}>Origem: {item.origem.nome}</Text>
         <Text style={styles.observationText}>Destino: {item.destino.nome}</Text>
         <Text style={styles.observationText}>Status: {item.status}</Text>
@@ -186,19 +128,19 @@ const MovementsListScreen = ({ navigation}: MovementsListScreenProps) => {
               title="Finalizar Entrega"
               onPress={() => handleImagePicker(item.id, "end")}
             />
-            <Button title="Ver Mapa"
-
+            <Button
+              title="Ver Mapa"
               onPress={() =>
                 navigation.navigate("Map", {
                   origem: item.origem,
-                  destino: item.destino
+                  destino: item.destino,
                 })}
             />
           </View>
         )}
         {item.status === "coleta finalizada" && (
-          <Button title="Ver Mapa"
-
+          <Button
+            title="Ver Mapa"
             onPress={() =>
               navigation.navigate("Map", {
                 origem: item.origem,
@@ -208,7 +150,7 @@ const MovementsListScreen = ({ navigation}: MovementsListScreenProps) => {
         )}
       </View>
     );
-  }
+  };
 
   const getCardStyle = (status: string) => {
     switch (status) {

@@ -12,8 +12,8 @@ const MapScreen = ({ route }: MapScreenProps) => {
       <MapView
         style={styles.map}
         initialRegion={{
-          latitude:origem.latitude,
-          longitude:origem.longitude,
+          latitude: origem.latitude,
+          longitude: origem.longitude,
           latitudeDelta: 0.05,
           longitudeDelta: 0.05,
         }}

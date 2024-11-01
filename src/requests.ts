@@ -16,7 +16,6 @@ apiInstance.interceptors.response.use(
   },
 );
 
-
 export const isCreated = (status: number) => status === 201;
 export const isBadRequest = (status: number) => status === 400;
 export const isUnauthorized = (status: number) => status === 401;

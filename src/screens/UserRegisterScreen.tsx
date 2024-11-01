@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Button, StyleSheet, TextInput, View } from "react-native";
 import { apiInstance } from "../requests";
 import { UserRegisterScreenProps } from "../navigation";
-import { customAlertSuccess, customAlertError } from "../utils";
+import { customAlertError, customAlertSuccess } from "../utils";
 
 export function UserRegister({ navigation }: UserRegisterScreenProps) {
   const [profile, setProfile] = useState("");

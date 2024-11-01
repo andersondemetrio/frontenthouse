@@ -4,11 +4,9 @@ import {
   StyleSheet,
   Switch,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import axios from "axios";
 import { apiInstance } from "../requests";
 import { UserListScreenProps } from "../navigation";
 import { customAlertError } from "../utils";
@@ -90,81 +88,6 @@ export default function UserListScreen({ navigation }: UserListScreenProps) {
     </View>
   );
 }
-
-// // Tela de Registro de Usuário
-// export function UserRegister({ navigation }) {
-//   const [profile, setProfile] = useState("");
-//   const [name, setName] = useState("");
-//   const [document, setDocument] = useState("");
-//   const [fullAddress, setFullAddress] = useState("");
-//   const [email, setEmail] = useState("");
-//   const [password, setPassword] = useState("");
-
-//   const handleSubmit = async () => {
-//     const userData = {
-//       profile,
-//       name,
-//       document,
-//       full_address: fullAddress,
-//       email,
-//       password,
-//     };
-
-//     try {
-//       const response = await apiInstance.post("/register", userData);
-//       if (response.status === 201) {
-//         Alert.alert("Sucesso", "Usuário adicionado com sucesso!");
-//         navigation.navigate("UserList"); // Volta para a tela de listagem após adicionar
-//       }
-//     } catch (error) {
-//       console.error("Erro ao adicionar usuário:", error);
-//       Alert.alert("Erro", "Não foi possível adicionar o usuário.");
-//     }
-//   };
-
-//   return (
-//     <View style={styles.registerContainer}>
-//       <TextInput
-//         style={styles.input}
-//         placeholder="Perfil"
-//         value={profile}
-//         onChangeText={setProfile}
-//       />
-//       <TextInput
-//         style={styles.input}
-//         placeholder="Nome"
-//         value={name}
-//         onChangeText={setName}
-//       />
-//       <TextInput
-//         style={styles.input}
-//         placeholder="Documento"
-//         value={document}
-//         onChangeText={setDocument}
-//       />
-//       <TextInput
-//         style={styles.input}
-//         placeholder="Endereço Completo"
-//         value={fullAddress}
-//         onChangeText={setFullAddress}
-//       />
-//       <TextInput
-//         style={styles.input}
-//         placeholder="Email"
-//         value={email}
-//         onChangeText={setEmail}
-//       />
-//       <TextInput
-//         style={styles.input}
-//         placeholder="Senha"
-//         value={password}
-//         secureTextEntry
-//         onChangeText={setPassword}
-//       />
-//       <Button title="Registrar" onPress={handleSubmit} />
-//     </View>
-//   );
-// }
 
 const styles = StyleSheet.create({
   container: {
